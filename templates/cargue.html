@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+
+{% block title %}Cargue{% endblock %}
+
+{% block content %}
+    <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+        <h1 class="text-3xl font-bold mb-4 text-blue-600">Página de Cargue</h1>
+        <p class="text-gray-700">Selecciona un archivo para cargar:</p>
+
+        <form method="POST" enctype="multipart/form-data">
+            <div class="mb-4">
+                <input type="file" name="file" class="form-control" required>
+            </div>
+            <div class="text-center mb-4 ">
+                <p>Nombre deseado para la tabla (Opcional): </p>
+                <input type="text" name="new_filename" class="form-control border-2 border-rose-600 w-64 text-center" placeholder="Nombre nuevo sin extension">
+            </div>
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Subir Archivo
+            </button>
+        </form>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="mt-4">
+                    {% for message in messages %}
+                        <div class="bg-green-100 text-green-700 p-4 rounded-lg">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+{% endblock %}

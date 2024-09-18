@@ -1,6 +1,9 @@
 from flask import Flask, render_template
+from cargue import cargue_bp  # Importa el blueprint de cargue
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'mysecretkey'
+app.register_blueprint(cargue_bp)
 
 @app.route('/')
 def home():
