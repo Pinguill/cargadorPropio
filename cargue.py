@@ -8,15 +8,28 @@ from sqlalchemy import create_engine
 POSTGRES_CONN_STR = 'postgresql://postgres:admin@localhost:5432/rcdatos'
 
 def insertTable(name):
-    df = pd.read_csv('../../../../Lake/data/' + name)
+    #df = pd.read_csv('../../../../Lake/data/' + name)
+    archivo_errores = '../../../../Lake/errors/errores_' + name
 
-    # try:
-    #     df = pd.read_csv('../../../../Lake/data/' + name, encoding='utf-8', on_bad_lines='warn')
-    # except UnicodeDecodeError:
-    #     # Si falla, intentar con latin1
-    #     print(f"Error de codificación con utf-8 en {name}, intentando con latin1.")
-    #     df = pd.read_csv('../../../../Lake/data/' + name, encoding='latin1', on_bad_lines='warn')
+    bad_rows = []
 
+    def processBadLines(badLine):
+        bad_rows.append(badLine)
+        return None
+
+    try:
+        df = pd.read_csv('../../../../Lake/data/' + name, quotechar='"', on_bad_lines=processBadLines, engine='python')
+    except UnicodeDecodeError:
+        # Si falla, intentar con latin1
+        print(f"Error de codificación con utf-8 en {name}, intentando con latin1.")
+        df = pd.read_csv('../../../../Lake/data/' + name, quotechar='"', encoding='latin1', on_bad_lines=processBadLines, engine='python')
+
+    if bad_rows:
+        with open(archivo_errores, 'w', encoding='latin1') as f:
+            f.write(','.join(df.columns) + '\n')
+            for row in bad_rows:
+                f.write(','.join(row) + '\n')
+        flash(f'Se encontraron {len(bad_rows)} filas problemáticas. Guardadas en C/Lake/errors/errores_{name}.', 'error')
 
     engine = create_engine(POSTGRES_CONN_STR)
     
