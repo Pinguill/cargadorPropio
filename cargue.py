@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+from shutil import move
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from werkzeug.utils import secure_filename
 from sqlalchemy import create_engine
@@ -18,11 +19,15 @@ def insertTable(name):
         return None
 
     try:
-        df = pd.read_csv('../../../../Lake/data/' + name, quotechar='"', on_bad_lines=processBadLines, engine='python')
+        df = pd.read_csv('../../../../Lake/data/' + name, quotechar='"', on_bad_lines=processBadLines, engine='python', header=None)
     except UnicodeDecodeError:
         # Si falla, intentar con latin1
         print(f"Error de codificación con utf-8 en {name}, intentando con latin1.")
-        df = pd.read_csv('../../../../Lake/data/' + name, quotechar='"', encoding='latin1', on_bad_lines=processBadLines, engine='python')
+        df = pd.read_csv('../../../../Lake/data/' + name, quotechar='"', encoding='latin1', on_bad_lines=processBadLines, engine='python', header=None)
+
+    # Asignacion de cabecera de los archivos
+    df.columns = df.iloc[0]
+    df = df[1:].reset_index(drop=True)
 
     if bad_rows:
         with open(archivo_errores, 'w', encoding='latin1') as f:
@@ -39,7 +44,9 @@ def insertTable(name):
         nombre_archivo = nombre_archivo[0:55].replace('_', '')
 
     # Cargar datos en PostgreSQL, creando la tabla si no existe
-    df.to_sql(nombre_archivo, engine, if_exists='replace', index=False, schema='public')
+    df.to_sql(nombre_archivo, engine, if_exists='replace', index=False, schema='staging')
+
+    move('../../../../Lake/data/' + name, os.path.join('../../../../Lake/procesados/', os.path.basename('../../../../Lake/data/' + name)))
 
 # Configura el blueprint para el módulo de cargue
 cargue_bp = Blueprint('cargue', __name__)

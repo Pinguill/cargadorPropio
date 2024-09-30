@@ -6,9 +6,10 @@ POSTGRES_CONN_STR = 'postgresql://postgres:admin@localhost:5432/rcdatos'
 
 def createDescription(tableName, column, desc):
     conn = psycopg2.connect(POSTGRES_CONN_STR)
+    conn.autocommit = True
     cursor = conn.cursor()
     
-    query = "comment on column {tableName}.{column} is '{desc}';"
+    query = "comment on column {}.{} is '{}'".format(tableName, column, desc)
     cursor.execute(query)
     
     cursor.close()
