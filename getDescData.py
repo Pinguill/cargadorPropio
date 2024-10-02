@@ -23,9 +23,9 @@ def remove_accents(text):
     # Filtramos los caracteres que no son letras base (como tildes)
     return ''.join([char for char in nfkd_form if not unicodedata.combining(char)])
 
-def getDDIData():
+def getDDIData(fileName):
     # Parsear el archivo XML
-    tree = ET.parse('../../Downloads/DANE-DIMPE-EDUCACIN-FORMAL-2022.xml')
+    tree = ET.parse('../../../../Lake/data/' + fileName)
     root = tree.getroot()
 
     # Definir el espacio de nombres que se está utilizando en el archivo XML
@@ -78,4 +78,3 @@ def getDDIData():
             createDescription(dataset_id['file_name'], var['var_name'], var['description'])
         print()
 
-getDDIData()

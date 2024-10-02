@@ -7,13 +7,15 @@
         <h1 class="text-3xl font-bold mb-4 text-blue-600">Página de Cargue</h1>
         <p class="text-gray-700">Selecciona un archivo para cargar:</p>
 
-        <form method="POST" enctype="multipart/form-data">
+        <form method="POST" enctype="multipart/form-data" oninput="clearMessages()">
             <div class="mb-4">
                 <input type="file" name="file" class="form-control" required>
             </div>
 
-            <div class="relative inline-block text-left">
-                <button id="dropdownDefaultButton" data-dropdown-toggle="dropdown" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" type="button">Dropdown button 
+            <div class="relative inline-block text-left mb-4">
+                <!-- Botón cuyo texto cambiará dinámicamente -->
+                <button id="dropdownDefaultButton" data-dropdown-toggle="dropdown" class="text-white bg-blue-500 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" type="button">
+                    Seleccionar tipo de archivo 
                     <svg class="w-2.5 h-2.5 ms-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
                     </svg>
@@ -23,25 +25,32 @@
                 <div id="dropdown" class="z-10 hidden bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700 absolute right-0 mt-2 origin-top-right">
                     <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownDefaultButton">
                         <li>
-                            <a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Dashboard</a>
+                            <a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white" onclick="selectFileType('excel', 'Excel')">Excel</a>
                         </li>
                         <li>
-                            <a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Settings</a>
+                            <a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white" onclick="selectFileType('csv', 'CSV')">CSV</a>
                         </li>
                         <li>
-                            <a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Earnings</a>
+                            <a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white" onclick="selectFileType('json', 'JSON')">JSON</a>
                         </li>
                         <li>
-                            <a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Sign out</a>
+                            <a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white" onclick="selectFileType('metadata', 'Metadata')">Metadata</a>
                         </li>
                     </ul>
                 </div>
             </div>
-            
 
-            <div class="text-center mb-4 ">
+            <input type="hidden" name="file_type" id="file_type" value="">
+
+            <!-- Input del separador, que solo se muestra para Excel o CSV -->
+            <div class="mb-4 hidden" id="separator_input">
+                <label for="separator">Separador (solo para CSV/Excel):</label>
+                <input type="text" name="separator" id="separator" class="form-control w-64 text-center border-2 border-rose-600" placeholder="Ej: ,">
+            </div>
+
+            <div class="text-center mb-4">
                 <p>Nombre deseado para la tabla (Opcional): </p>
-                <input type="text" name="new_filename" class="form-control border-2 border-rose-600 w-64 text-center" placeholder="Nombre nuevo sin extension">
+                <input type="text" name="new_filename" class="form-control border-2 border-rose-600 w-64 text-center" placeholder="Nombre nuevo sin extensión">
             </div>
             <div class="text-center mb-4">
                 <p>Desea crear la tabla rápidamente: </p>
@@ -54,7 +63,48 @@
             </button>
         </form>
 
+        <div class="mt-4" id="flash_msg">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="mt-4">
+                        {% for category, message in messages %}
+                            {% if category == 'error' %}
+                                <div class="bg-red-100 text-red-700 p-4 rounded-lg">
+                                    {{ message }}
+                                </div>
+                            {% else %}
+                                <div class="bg-green-100 text-green-700 p-4 rounded-lg">
+                                    {{ message }}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+        </div>
+
         <script>
+            // Función para seleccionar el tipo de archivo y cambiar el texto del botón
+            function selectFileType(type, label) {
+                document.getElementById('file_type').value = type;
+                var separatorInput = document.getElementById('separator_input');
+                document.getElementById('dropdownDefaultButton').innerHTML = label + ' <svg class="w-2.5 h-2.5 ms-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/></svg>';
+                
+                // Mostrar input del separador si se selecciona CSV o Excel
+                if (type === 'csv' || type === 'excel') {
+                    separatorInput.classList.remove('hidden');
+                } else {
+                    separatorInput.classList.add('hidden');
+                }
+
+                // Ocultar el dropdown después de la selección
+                document.getElementById('dropdown').classList.add('hidden');
+            }
+
+            function clearMessages() {
+                document.getElementById('flash_msg').innerHTML = '';
+            }
+
             // Mostrar/ocultar el dropdown al hacer clic en el botón
             document.getElementById('dropdownDefaultButton').addEventListener('click', function () {
                 var dropdown = document.getElementById('dropdown');
@@ -70,23 +120,6 @@
                 }
             });
         </script>
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="mt-4">
-                    {% for category, message in messages %}
-                        {% if category == 'error' %}
-                            <div class="bg-red-100 text-red-700 p-4 rounded-lg">
-                                {{ message }}
-                            </div>
-                        {% else %}
-                            <div class="bg-green-100 text-green-700 p-4 rounded-lg">
-                                {{ message }}
-                            </div>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
+
     </div>
 {% endblock %}
