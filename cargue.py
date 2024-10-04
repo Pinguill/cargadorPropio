@@ -20,6 +20,7 @@ def insertTable(name, file_type, separator):
         return None
     
     try:
+        print(file_type)
         if file_type == 'csv':
             df = pd.read_csv('../../../../Lake/data/' + name, sep=separator, quotechar='"', on_bad_lines=processBadLines, engine='python', header=None)
         elif file_type == 'excel':
@@ -27,6 +28,7 @@ def insertTable(name, file_type, separator):
         elif file_type == 'json':
             df = pd.read_json('../../../../Lake/data/' + name)
         elif file_type == 'metadata':
+            print("entre en el if")
             getDescData.getDDIData(name)
             return
     except UnicodeDecodeError:

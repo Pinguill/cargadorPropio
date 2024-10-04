@@ -5,6 +5,86 @@
 {% block content %}
     <div class="bg-white p-6 rounded-lg shadow-lg text-center">
         <h1 class="text-3xl font-bold mb-4 text-blue-600">Página de Consulta</h1>
-        <p class="text-gray-700">Aquí puedes realizar consultas de datos o información.</p>
+
+        <!-- Tabla para mostrar los datos -->
+        <table class="table-auto w-full">
+            <thead>
+                <tr>
+                    <th class="px-4 py-2">Nombre del Conjunto de Datos</th>
+                    <th class="px-4 py-2">Nombre Columna</th>
+                    <th class="px-4 py-2">Descripción</th>
+                    <th class="px-4 py-2">Tipo Columna</th>
+                    <th class="px-4 py-2">Tag</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in data %}
+                <tr>
+                    <td class="border px-4 py-2">{{ row[0] }}</td>
+                    <td class="border px-4 py-2">{{ row[1] }}</td>
+                    <td class="border px-4 py-2">{{ row[2] }}</td>
+                    <td class="border px-4 py-2">{{ row[3] }}</td>
+                    <td class="border px-4 py-2" ondblclick="editTag(this, '{{ row[0] }}', '{{ row[1] }}')">
+                        {{ row[4] if row[4] else "Sin Tag" }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Controles de paginación -->
+        <div class="flex justify-between items-center mt-4">
+            {% if page > 1 %}
+            <a href="{{ url_for('consulta.consulta', page=page-1) }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Anterior
+            </a>
+            {% endif %}
+
+            <span class="text-gray-700">Página {{ page }} de {{ total_pages }}</span>
+
+            {% if page < total_pages %}
+            <a href="{{ url_for('consulta.consulta', page=page+1) }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Siguiente
+            </a>
+            {% endif %}
+        </div>
     </div>
+
+    <script>
+        function editTag(cell, tableName, columnName) {
+            let currentTag = cell.innerText;
+            let input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentTag === "Sin Tag" ? "" : currentTag;
+            input.onblur = function() {
+                saveTag(input.value, tableName, columnName, cell);
+            };
+            cell.innerHTML = '';
+            cell.appendChild(input);
+            input.focus();
+        }
+
+        function saveTag(newTag, tableName, columnName, cell) {
+            fetch('/update_tag', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    table_name: tableName,
+                    column_name: columnName,
+                    new_tag: newTag
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    cell.innerText = newTag || "Sin Tag";
+                } else {
+                    alert("Error al actualizar el tag");
+                }
+            });
+        }
+    </script>
 {% endblock %}
+    

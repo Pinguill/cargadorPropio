@@ -4,12 +4,14 @@ import psycopg2
 
 POSTGRES_CONN_STR = 'postgresql://postgres:admin@localhost:5432/rcdatos'
 
-def createDescription(tableName, column, desc):
+def createDescription(tableName, column, desc, tipo):
     conn = psycopg2.connect(POSTGRES_CONN_STR)
     conn.autocommit = True
     cursor = conn.cursor()
-    
-    query = "comment on column {}.{} is '{}'".format(tableName, column, desc)
+
+    query = ''' INSERT INTO metadata.descripcion_columnas (nombre_tabla, nombre_columna, descripcion, tipo_columna) 
+            VALUES('{}', '{}', '{}', '{}')
+             '''.format(tableName, column, desc, tipo)    
     cursor.execute(query)
     
     cursor.close()
@@ -42,10 +44,17 @@ def getDDIData(fileName):
         if file_name_element is not None:
             # Limpiar el nombre del archivo eliminando \n, espacios extra, y tildes
             file_name = file_name_element.text.strip()
-            file_name = remove_accents(file_name)  # Eliminar tildes
-            file_name = file_name.replace(' ', '_')
-            file_name = file_name[0:55].replace('_', '')
+            # print("=========================" + file_name + "=================================")
 
+            file_name = remove_accents(file_name)  # Eliminar tildes
+            # file_name = file_name.replace(' ', '_')
+            print("=========================" + file_name + "=================================")
+
+            file_name = file_name.replace('.NSDstat', '')
+            # if len(file_name) > 32:
+            #     file_name = file_name[0:55].replace('_', '')
+            # print("=========================" + file_name + "=================================")
+            
 
             # Inicializar una lista para las variables de este dataset
             datasets[file_id] = {"file_name": file_name, "variables": []}
@@ -60,12 +69,17 @@ def getDDIData(fileName):
         label_element = var.find(".//ddi:labl", namespaces)
         label = label_element.text.strip() if label_element is not None else "Sin descripción"
 
+        # Obtener el tipo de dato en <varFormat>
+        var_format_element = var.find(".//ddi:varFormat", namespaces)
+        var_type = var_format_element.attrib.get("type") if var_format_element is not None else "Desconocido"
+
         # Si el archivo tiene un ID y pertenece a uno de los datasets encontrados
         if file_ref in datasets:
             datasets[file_ref]["variables"].append({
                 "var_id": var_id,
                 "var_name": var_name,
-                "description": label
+                "description": label,
+                "var_type": var_type
             })
 
     # Mostrar los datasets y sus variables
@@ -75,6 +89,6 @@ def getDDIData(fileName):
         print("Variables:")
         for var in dataset_info["variables"]:
             print(f"  ID: {var['var_id']}, Nombre: {var['var_name']}, Descripción: {var['description']}")
-            createDescription(dataset_id['file_name'], var['var_name'], var['description'])
+            createDescription(dataset_info['file_name'], var['var_name'], var['description'], var['var_type'])
         print()
 
