@@ -6,6 +6,14 @@
     <div class="bg-white p-6 rounded-lg shadow-lg text-center">
         <h1 class="text-3xl font-bold mb-4 text-blue-600">Página de Consulta</h1>
 
+        <!-- Formulario de búsqueda -->
+        <form method="GET" action="{{ url_for('consulta.consulta') }}">
+            <input type="text" name="search_tag" placeholder="Buscar por Tag" class="border rounded py-2 px-3 text-gray-700">
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Buscar
+            </button>
+        </form>
+    
         <!-- Tabla para mostrar los datos -->
         <table class="table-auto w-full">
             <thead>
@@ -35,15 +43,15 @@
         <!-- Controles de paginación -->
         <div class="flex justify-between items-center mt-4">
             {% if page > 1 %}
-            <a href="{{ url_for('consulta.consulta', page=page-1) }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            <a href="{{ url_for('consulta.consulta', page=page-1, search_tag=request.args.get('search_tag')) }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                 Anterior
             </a>
             {% endif %}
-
+        
             <span class="text-gray-700">Página {{ page }} de {{ total_pages }}</span>
-
+        
             {% if page < total_pages %}
-            <a href="{{ url_for('consulta.consulta', page=page+1) }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            <a href="{{ url_for('consulta.consulta', page=page+1, search_tag=request.args.get('search_tag')) }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                 Siguiente
             </a>
             {% endif %}

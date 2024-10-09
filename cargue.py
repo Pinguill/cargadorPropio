@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 import getDescData
-import xlrd
 from shutil import move
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from werkzeug.utils import secure_filename
@@ -23,10 +22,13 @@ def insertTable(name, file_type, separator):
         print(file_type)
         if file_type == 'csv':
             df = pd.read_csv('../../../../Lake/data/' + name, sep=separator, quotechar='"', on_bad_lines=processBadLines, engine='python', header=None)
+            extension = '.CSV' 
         elif file_type == 'excel':
             df = pd.read_excel('../../../../Lake/data/' + name)
+            extension = '.xlsx'
         elif file_type == 'json':
             df = pd.read_json('../../../../Lake/data/' + name)
+            extension = '.json'
         elif file_type == 'metadata':
             print("entre en el if")
             getDescData.getDDIData(name)

@@ -11,22 +11,51 @@ def conectar_db():
         password="admin"
     )
 
-def obtener_datos(page, per_page):
+def obtener_datos(page, per_page, search_tag=None):
     offset = (page - 1) * per_page
+    
+    # Consulta base
     query = """
-        SELECT nombre_tabla, nombre_columna, descripcion, tipo_columna
-        FROM metadata.descripcion_columnas
-        LIMIT %s OFFSET %s
+        SELECT dc.nombre_tabla, dc.nombre_columna, dc.descripcion, dc.tipo_columna, 
+               STRING_AGG(t.nombre_tag, ', ') AS tags
+        FROM metadata.descripcion_columnas dc
+        LEFT JOIN metadata.tag_columna tc ON dc.id_columna = tc.id_column
+        LEFT JOIN metadata.tags t ON tc.id_tag = t.id_tag
     """
-    total_records_query = "SELECT COUNT(*) FROM metadata.descripcion_columnas"
+    
+    count_query = """
+        SELECT COUNT(DISTINCT dc.id_columna)
+        FROM metadata.descripcion_columnas dc
+        LEFT JOIN metadata.tag_columna tc ON dc.id_columna = tc.id_column
+        LEFT JOIN metadata.tags t ON tc.id_tag = t.id_tag
+    """
+
+    params = []  # Lista para almacenar los parámetros de la consulta
+
+    # Si hay un término de búsqueda, se añade una cláusula WHERE
+    if search_tag:
+        query += " WHERE t.nombre_tag ILIKE %s"
+        count_query += " WHERE t.nombre_tag ILIKE %s"
+        params.append(f"%{search_tag}%")  # Agregamos el valor de búsqueda a los parámetros
+
+    query += " GROUP BY dc.nombre_tabla, dc.nombre_columna, dc.descripcion, dc.tipo_columna"
+    query += " LIMIT %s OFFSET %s"
+    
+    params.extend([per_page, offset])  # Agregamos los parámetros de paginación
 
     conn = conectar_db()
     cursor = conn.cursor()
 
-    cursor.execute(query, (per_page, offset))
+    # Ejecutar la consulta para obtener los datos filtrados
+    cursor.execute(query, tuple(params))
     data = cursor.fetchall()
 
-    cursor.execute(total_records_query)
+    # Ejecutar la consulta para contar el número total de registros filtrados
+    if search_tag:
+        cursor.execute(count_query, (f"%{search_tag}%",))
+    else:
+        cursor.execute(count_query)
+    
     total_records = cursor.fetchone()[0]
 
     cursor.close()
@@ -34,13 +63,15 @@ def obtener_datos(page, per_page):
 
     return data, total_records
 
+
 @consulta_bp.route('/consulta')
 def consulta():
     page = request.args.get('page', 1, type=int)
     per_page = 10
-    data, total_records = obtener_datos(page, per_page)
+    search_tag = request.args.get('search_tag', None)
+    data, total_records = obtener_datos(page, per_page, search_tag)
     total_pages = (total_records + per_page - 1) // per_page
-    return render_template('consulta.html', data=data, page=page, total_pages=total_pages)
+    return render_template('consulta.html', data=data, page=page, total_pages=total_pages, search_tag=search_tag)
 
 @consulta_bp.route('/update_tag', methods=['POST'])
 def update_tag():
