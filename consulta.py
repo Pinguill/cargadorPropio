@@ -45,9 +45,9 @@ def obtener_tags():
 def obtener_datos(page, per_page, selected_tags=None, conjunto=None, descripcion=None):
     offset = (page - 1) * per_page  # Calcula el desplazamiento
     
-    # Consulta básica sin filtros
+    # Consulta básica sin filtros, agregando dc.id_columna
     query = """
-        SELECT dc.nombre_tabla, dc.nombre_columna, dc.descripcion, dc.tipo_columna, ARRAY_AGG(t.nombre_tag)
+        SELECT dc.id_columna, dc.nombre_tabla, dc.nombre_columna, dc.descripcion, dc.tipo_columna, ARRAY_AGG(t.nombre_tag), dc.es_tabla
         FROM metadata.descripcion_columnas dc
         LEFT JOIN metadata.tag_columna tc ON dc.id_columna = tc.id_column
         LEFT JOIN metadata.tags t ON tc.id_tag = t.id_tag
@@ -77,8 +77,8 @@ def obtener_datos(page, per_page, selected_tags=None, conjunto=None, descripcion
         """
         params.append(selected_tags)
     
-    # Añade la cláusula GROUP BY y paginación
-    query += " GROUP BY dc.id_columna LIMIT %s OFFSET %s"
+    # Añade la cláusula GROUP BY y paginación, agregando dc.id_columna en el GROUP BY
+    query += " GROUP BY dc.id_columna, dc.nombre_tabla, dc.nombre_columna, dc.descripcion, dc.tipo_columna, dc.es_tabla LIMIT %s OFFSET %s"
     params.extend([per_page, offset])
     
     conn = conectar_db()
@@ -147,29 +147,45 @@ def consulta():
     # Renderizar la plantilla y pasar los datos, los tags, la página actual y el total de páginas
     return render_template('consulta.html', data=data, tags=tags, page=page, total_pages=total_pages)
 
-
-@consulta_bp.route('/consulta/crear_tablas', methods=['POST'])
-def crear_tablas():
-    # Obtener los nombres de las columnas seleccionadas
-    columnas_seleccionadas = request.form.getlist('es_tabla')
+@consulta_bp.route('/actualizar_estado', methods=['POST'])
+def actualizar_estado():
+    # Obtén los datos enviados desde el cliente (AJAX)
+    data = request.get_json()
     
-    if columnas_seleccionadas:
-        # Ruta donde se guardará el archivo .txt
-        ruta_txt = os.path.join(os.getcwd(), 'scripts_crear_tablas.txt')
-
-        with open(ruta_txt, 'w') as file:
-            for columna in columnas_seleccionadas:
-                # Crear el script SQL para la tabla
-                script_sql = f"""
-                CREATE TABLE {columna} (
-                    codigo character varying(32),
-                    descripcion TEXT
-                );
-                """
-                file.write(script_sql + '\n')
-
-        # Devolver el mensaje en formato JSON
-        return jsonify({'message': f"Archivo creado: {ruta_txt}"})
-
-    # Si no se seleccionaron columnas, devolver un mensaje de error
-    return jsonify({'message': "No se seleccionaron columnas para crear tablas."})
+    # Extrae los valores de columna y el estado del checkbox
+    columna = data.get('columna')
+    es_lista = data.get('es_lista')
+    
+    # Conecta a la base de datos
+    conn = conectar_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Actualiza el campo "es_tabla" en la tabla según el nombre de la columna
+        print(type(es_lista))
+        if es_lista == 0:
+            query = """
+                UPDATE metadata.descripcion_columnas
+                SET es_tabla = false
+                WHERE id_columna = %s
+            """
+        elif es_lista == 1:
+            query = """
+                UPDATE metadata.descripcion_columnas
+                SET es_tabla = true
+                WHERE id_columna = %s
+            """
+        cursor.execute(query, (columna,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        # Responde con un JSON de éxito
+        return jsonify(success=True)
+    except Exception as e:
+        print(f"Error al actualizar el estado: {e}")
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        # En caso de error, responde con un JSON de error
+        return jsonify(success=False, error=str(e)), 500

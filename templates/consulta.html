@@ -55,13 +55,13 @@
         </div>
         
         <!-- Formulario para enviar los checkboxes seleccionados -->
-        <form id="form-crear-tablas" method="POST" action="{{ url_for('consulta.crear_tablas') }}">
+        <form id="form-actualizar" method="POST" action=""> 
             <table class="table-auto w-full">
                 <thead>
                     <tr>
                         <th class="px-4 py-2">Nombre del Conjunto de Datos</th>
                         <th class="px-4 py-2">Nombre Columna</th>
-                        <th class="px-4 py-2">Es tabla</th>
+                        <th class="px-4 py-2">Es Lista</th>
                         <th class="px-4 py-2">Descripción</th>
                         <th class="px-4 py-2">Tipo Columna</th>
                         <th class="px-4 py-2">Tag</th>
@@ -70,25 +70,21 @@
                 <tbody>
                     {% for row in data %}
                     <tr>
-                        <td class="border px-4 py-2 text-left">{{ row[0] }}</td>
                         <td class="border px-4 py-2 text-left">{{ row[1] }}</td>
-                        <td class="border px-4 py-2 text-center">
-                            <input type="checkbox" name="es_tabla" value="{{ row[1] }}">
-                        </td>
                         <td class="border px-4 py-2 text-left">{{ row[2] }}</td>
-                        <td class="border px-4 py-2">{{ row[3] }}</td>
+                        <td class="border px-4 py-2 text-center">
+                            <input type="checkbox" name="es_lista" value="{{ row[0] }}" {% if row[6] %} checked {% endif %} 
+                                onchange="actualizarEstado(this, '{{ row[0] }}')">
+                        </td>
+                        <td class="border px-4 py-2 text-left">{{ row[3] }}</td>
+                        <td class="border px-4 py-2">{{ row[4] }}</td>
                         <td class="border px-4 py-2">
-                            {{ row[4] if row[4] else "Sin Tag" }}
+                            {{ row[5] if row[5] else "Sin Tag" }}
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
-
-            <!-- Botón para crear las tablas -->
-            <button type="button" id="crear-tablas-btn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4">
-                Crear Tablas
-            </button>
         </form>
         
         <!-- Mensaje de éxito o error -->
@@ -118,25 +114,31 @@
             dropdown.classList.toggle('hidden');
         }
 
-        document.getElementById('crear-tablas-btn').addEventListener('click', function() {
-            // Obtener el formulario
-            const form = document.getElementById('form-crear-tablas');
-            const formData = new FormData(form);
-
-            // Enviar la solicitud a la ruta de creación de tablas
-            fetch("{{ url_for('consulta.crear_tablas') }}", {
+        function actualizarEstado(checkbox, columna) {
+            var esLista = checkbox.checked ? 1 : 0; // 1 si está marcado, 0 si no
+            fetch("{{ url_for('consulta.actualizar_estado') }}", {
                 method: "POST",
-                body: formData,
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token() }}" // Si estás utilizando CSRF Protection
+                },
+                body: JSON.stringify({
+                    columna: columna,
+                    es_lista: esLista
+                })
             })
-            .then(response => response.text())
+            .then(response => response.json())
             .then(data => {
-                // Mostrar el resultado en el div de mensaje
-                document.getElementById('mensaje-resultado').innerText = data;
+                if (data.success) {
+                    document.getElementById("mensaje-resultado").innerText = "Actualización exitosa en id_columna: " + columna ;
+                } else {
+                    document.getElementById("mensaje-resultado").innerText = "Error al actualizar en id_columna: " + columna;
+                }
             })
             .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('mensaje-resultado').innerText = 'Error al crear las tablas.';
+                console.error("Error:", error);
+                document.getElementById("mensaje-resultado").innerText = "Error en la petición.";
             });
-        });
+        }
     </script>
 {% endblock %}
