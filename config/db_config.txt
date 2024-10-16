@@ -1,0 +1,5 @@
+db_type=Postgres
+host=localhost
+database=rcdatos
+user=postgres
+password=admin

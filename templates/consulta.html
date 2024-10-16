@@ -6,44 +6,98 @@
     <div class="bg-white p-6 rounded-lg shadow-lg text-center">
         <h1 class="text-3xl font-bold mb-4 text-blue-600">Página de Consulta</h1>
 
-        <!-- Formulario de búsqueda -->
-        <form method="GET" action="{{ url_for('consulta.consulta') }}">
-            <input type="text" name="search_tag" placeholder="Buscar por Tag" class="border rounded py-2 px-3 text-gray-700">
-            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                Buscar
+        <!-- Dropdown para filtros por tags -->
+        <div class="grid grid-cols-3 h-16">
+            <div class="items-stretch">
+                <form method="GET" action="{{ url_for('consulta.consulta') }}">
+                    <input type="text" name="filtrar_conjunto" id="filtrar_conjunto" class="border rounded py-2 px-4 text-gray-700" placeholder="Filtrar Conjunto de Datos" />
+                    <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-2 rounded">
+                        Filtrar Conjunto de Datos
+                    </button>
+                </form>
+            </div>
+            <div class="items-stretch">
+                <form method="GET" action="{{ url_for('consulta.consulta') }}">
+                    <input type="text" name="filtrar_desc" id="filtrar_desc" class="border rounded py-2 px-3 text-gray-700" placeholder="Filtrar Descripción" />
+                    <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-2 rounded">
+                        Filtrar Descripción
+                    </button>
+                </form>
+            </div>
+            <!-- Dropdown para filtrar por tags -->
+            <div class="">
+                <form id="crear_tablas" method="GET" action="{{ url_for('consulta.consulta') }}">
+                    <div class="relative inline-block text-left mb-4">
+                        <button type="button" onclick="toggleDropdown()" class="inline-flex justify-between w-64 px-4 py-2 bg-white text-sm font-medium text-gray-700 border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none">
+                            Filtrar por Tags
+                            <svg class="ml-2 -mr-1 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M5.292 7.292a1 1 0 011.414 0L10 10.586l3.293-3.294a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+            
+                        <div id="dropdownTags" class="origin-top-right absolute right-0 mt-2 w-64 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 hidden">
+                            <div class="py-1 max-h-56 overflow-y-auto">
+                                {% for tag in tags %}
+                                <div class="flex items-center mb-2">
+                                    <input type="checkbox" id="tag_{{ tag[2] }}" name="tags" value="{{ tag[2] }}" class="mr-2">
+                                    <label for="tag_{{ tag[2] }}" class="text-gray-700">{{ tag[0] }} - {{ tag[1] }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+            
+                    <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                        Filtrar Tag
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Formulario para enviar los checkboxes seleccionados -->
+        <form id="form-crear-tablas" method="POST" action="{{ url_for('consulta.crear_tablas') }}">
+            <table class="table-auto w-full">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-2">Nombre del Conjunto de Datos</th>
+                        <th class="px-4 py-2">Nombre Columna</th>
+                        <th class="px-4 py-2">Es tabla</th>
+                        <th class="px-4 py-2">Descripción</th>
+                        <th class="px-4 py-2">Tipo Columna</th>
+                        <th class="px-4 py-2">Tag</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in data %}
+                    <tr>
+                        <td class="border px-4 py-2 text-left">{{ row[0] }}</td>
+                        <td class="border px-4 py-2 text-left">{{ row[1] }}</td>
+                        <td class="border px-4 py-2 text-center">
+                            <input type="checkbox" name="es_tabla" value="{{ row[1] }}">
+                        </td>
+                        <td class="border px-4 py-2 text-left">{{ row[2] }}</td>
+                        <td class="border px-4 py-2">{{ row[3] }}</td>
+                        <td class="border px-4 py-2">
+                            {{ row[4] if row[4] else "Sin Tag" }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Botón para crear las tablas -->
+            <button type="button" id="crear-tablas-btn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4">
+                Crear Tablas
             </button>
         </form>
-    
-        <!-- Tabla para mostrar los datos -->
-        <table class="table-auto w-full">
-            <thead>
-                <tr>
-                    <th class="px-4 py-2">Nombre del Conjunto de Datos</th>
-                    <th class="px-4 py-2">Nombre Columna</th>
-                    <th class="px-4 py-2">Descripción</th>
-                    <th class="px-4 py-2">Tipo Columna</th>
-                    <th class="px-4 py-2">Tag</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in data %}
-                <tr>
-                    <td class="border px-4 py-2">{{ row[0] }}</td>
-                    <td class="border px-4 py-2">{{ row[1] }}</td>
-                    <td class="border px-4 py-2">{{ row[2] }}</td>
-                    <td class="border px-4 py-2">{{ row[3] }}</td>
-                    <td class="border px-4 py-2" ondblclick="editTag(this, '{{ row[0] }}', '{{ row[1] }}')">
-                        {{ row[4] if row[4] else "Sin Tag" }}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        
+        <!-- Mensaje de éxito o error -->
+        <div id="mensaje-resultado" class="mt-4 text-gray-700"></div>
 
         <!-- Controles de paginación -->
         <div class="flex justify-between items-center mt-4">
             {% if page > 1 %}
-            <a href="{{ url_for('consulta.consulta', page=page-1, search_tag=request.args.get('search_tag')) }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            <a href="{{ url_for('consulta.consulta', page=page-1, filtrar_conjunto=request.args.get('filtrar_conjunto'), filtrar_desc=request.args.get('filtrar_desc'), tags=request.args.getlist('tags')) }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                 Anterior
             </a>
             {% endif %}
@@ -51,7 +105,7 @@
             <span class="text-gray-700">Página {{ page }} de {{ total_pages }}</span>
         
             {% if page < total_pages %}
-            <a href="{{ url_for('consulta.consulta', page=page+1, search_tag=request.args.get('search_tag')) }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            <a href="{{ url_for('consulta.consulta', page=page+1, filtrar_conjunto=request.args.get('filtrar_conjunto'), filtrar_desc=request.args.get('filtrar_desc'), tags=request.args.getlist('tags')) }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                 Siguiente
             </a>
             {% endif %}
@@ -59,40 +113,30 @@
     </div>
 
     <script>
-        function editTag(cell, tableName, columnName) {
-            let currentTag = cell.innerText;
-            let input = document.createElement('input');
-            input.type = 'text';
-            input.value = currentTag === "Sin Tag" ? "" : currentTag;
-            input.onblur = function() {
-                saveTag(input.value, tableName, columnName, cell);
-            };
-            cell.innerHTML = '';
-            cell.appendChild(input);
-            input.focus();
+        function toggleDropdown() {
+            var dropdown = document.getElementById('dropdownTags');
+            dropdown.classList.toggle('hidden');
         }
 
-        function saveTag(newTag, tableName, columnName, cell) {
-            fetch('/update_tag', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    table_name: tableName,
-                    column_name: columnName,
-                    new_tag: newTag
-                })
+        document.getElementById('crear-tablas-btn').addEventListener('click', function() {
+            // Obtener el formulario
+            const form = document.getElementById('form-crear-tablas');
+            const formData = new FormData(form);
+
+            // Enviar la solicitud a la ruta de creación de tablas
+            fetch("{{ url_for('consulta.crear_tablas') }}", {
+                method: "POST",
+                body: formData,
             })
-            .then(response => response.json())
+            .then(response => response.text())
             .then(data => {
-                if (data.success) {
-                    cell.innerText = newTag || "Sin Tag";
-                } else {
-                    alert("Error al actualizar el tag");
-                }
+                // Mostrar el resultado en el div de mensaje
+                document.getElementById('mensaje-resultado').innerText = data;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('mensaje-resultado').innerText = 'Error al crear las tablas.';
             });
-        }
+        });
     </script>
 {% endblock %}
-    

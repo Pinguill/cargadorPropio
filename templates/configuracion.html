@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+
+{% block title %}Configuración{% endblock %}
+
+{% block content %}
+    <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+        <h1 class="text-3xl font-bold mb-4 text-blue-600">Configuración</h1>
+
+        <form method="POST" enctype="multipart/form-data">
+            <div class="grid grid-cols-2 mb-2">
+                <div class="rounded-lg shadow-inner">
+                    <h1 class="text-2xl font-bold mb-4">Base de datos</h1>
+                    <select id="db_type" name="db_type" class="appearance-none w-1/2 bg-white border border-gray-300 text-gray-700 py-2 px-4 pr-8 rounded leading-tight focus:outline-none focus:shadow-outline mb-2" required>
+                        <option value="" disabled selected class="text-center">Seleccione una base de datos</option>
+                        <option>Oracle</option>
+                        <option>Postgres</option>
+                    </select>
+                      
+                    <!-- Formulario para ingresar configuración de base de datos -->
+                    <div class="mb-2">
+                        <label for="host" class="block text-gray-700">Host</label>
+                        <input type="text" name="host" class="border rounded py-2 px-3 text-gray-700 w-1/2" required>
+                    </div>
+                    <div class="mb-2">
+                        <label for="database" class="block text-gray-700">Base de Datos</label>
+                        <input type="text" name="database" class="border rounded py-2 px-3 text-gray-700 w-1/2" required>
+                    </div>
+                    <div class="mb-2">
+                        <label for="user" class="block text-gray-700">Usuario</label>
+                        <input type="text" name="user" class="border rounded py-2 px-3 text-gray-700 w-1/2" required>
+                    </div>
+                    <div class="mb-2">
+                        <label for="password" class="block text-gray-700">Contraseña</label>
+                        <input type="password" name="password" class="border rounded py-2 px-3 text-gray-700 w-1/2" required>
+                    </div>
+                </div>
+                <!-- Formulario para subir logo -->
+                <div class="rounded-lg shadow-inner place-content-center ml-2">
+                    <h1 class="text-2xl font-bold mb-12">Logo</h1>    
+                    <div class="mb-4">
+                        <label for="logo" class="block text-gray-700">Subir Logo</label>
+                        <input type="file" name="logo" accept="image/*" class="border rounded py-2 px-3 text-gray-700 w-1/2">
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                Guardar Configuración
+            </button>
+        </form>
+    </div>
+    <script>
+        function validateForm() {
+            const dbType = document.getElementById('db_type').value;
+            if (!dbType) {
+                alert('Debe seleccionar una base de datos');
+                return false;
+            }
+            return true;
+        }
+    </script>
+{% endblock %}

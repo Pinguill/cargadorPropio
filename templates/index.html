@@ -5,13 +5,16 @@
 {% block content %}
     <div class="bg-white p-6 rounded-lg shadow-lg text-center">
         <h1 class="text-3xl font-bold mb-4 text-blue-600">Bienvenido a Cargador Propio</h1>
-        <p class="text-gray-700">Desde aquí puedes ir al cargue de archivos.</p>
+        <p class="text-gray-700">Desde aquí puedes elegir que quieres hacer.</p>
         <div class="mt-4 space-x-4">
             <a href="{{ url_for('cargue.cargue') }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                 Ir a Cargue
             </a>
             <a href="{{ url_for('consulta.consulta') }}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                 Ir a Consulta
+            </a>
+            <a href="configuracion" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                Ir a Configuración
             </a>
         </div>
     </div>

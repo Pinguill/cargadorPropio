@@ -1,0 +1,12 @@
+
+                CREATE TABLE NOVEDAD_ID (
+                    codigo character varying(32),
+                    descripcion TEXT
+                );
+                
+
+                CREATE TABLE NOVEDAD_CODIGO (
+                    codigo character varying(32),
+                    descripcion TEXT
+                );
+                
