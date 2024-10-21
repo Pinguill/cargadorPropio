@@ -8,6 +8,7 @@
         <p class="text-gray-700">Selecciona un archivo para cargar:</p>
 
         <form method="POST" enctype="multipart/form-data" oninput="clearMessages()">
+            {{ form.hidden_tag() }}
             <div class="mb-4">
                 <input type="file" name="file" class="form-control" required>
             </div>

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 import psycopg2
 import oracledb
 import os
@@ -53,7 +53,7 @@ def obtener_datos(page, per_page, selected_tags=None, conjunto=None, descripcion
         LEFT JOIN metadata.tags t ON tc.id_tag = t.id_tag
         WHERE 1=1
     """
-    
+
     params = []
     
     # Filtro por conjunto de datos
@@ -122,7 +122,7 @@ def obtener_datos(page, per_page, selected_tags=None, conjunto=None, descripcion
     
     return data, total_records
 
-@consulta_bp.route('/consulta')
+@consulta_bp.route('/consulta', methods=['GET', 'POST'])
 def consulta():
     # Parámetro de la página (por defecto es 1)
     page = request.args.get('page', 1, type=int)
@@ -147,7 +147,7 @@ def consulta():
     # Renderizar la plantilla y pasar los datos, los tags, la página actual y el total de páginas
     return render_template('consulta.html', data=data, tags=tags, page=page, total_pages=total_pages)
 
-@consulta_bp.route('/actualizar_estado', methods=['POST'])
+@consulta_bp.route('/actualizar_estado', methods=['GET', 'POST'])
 def actualizar_estado():
     # Obtén los datos enviados desde el cliente (AJAX)
     data = request.get_json()

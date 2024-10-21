@@ -9,7 +9,7 @@
         <!-- Dropdown para filtros por tags -->
         <div class="grid grid-cols-3 h-16">
             <div class="items-stretch">
-                <form method="GET" action="{{ url_for('consulta.consulta') }}">
+                <form method="GET" action="{{ url_for('consulta.consulta') }}" enctype="multipart/form-data">
                     <input type="text" name="filtrar_conjunto" id="filtrar_conjunto" class="border rounded py-2 px-4 text-gray-700" placeholder="Filtrar Conjunto de Datos" />
                     <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-2 rounded">
                         Filtrar Conjunto de Datos
@@ -17,7 +17,7 @@
                 </form>
             </div>
             <div class="items-stretch">
-                <form method="GET" action="{{ url_for('consulta.consulta') }}">
+                <form method="GET" action="{{ url_for('consulta.consulta') }}" enctype="multipart/form-data">
                     <input type="text" name="filtrar_desc" id="filtrar_desc" class="border rounded py-2 px-3 text-gray-700" placeholder="Filtrar Descripción" />
                     <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-2 rounded">
                         Filtrar Descripción
@@ -26,7 +26,7 @@
             </div>
             <!-- Dropdown para filtrar por tags -->
             <div class="">
-                <form id="crear_tablas" method="GET" action="{{ url_for('consulta.consulta') }}">
+                <form id="crear_tablas" method="GET" action="{{ url_for('consulta.consulta') }}" enctype="multipart/form-data">
                     <div class="relative inline-block text-left mb-4">
                         <button type="button" onclick="toggleDropdown()" class="inline-flex justify-between w-64 px-4 py-2 bg-white text-sm font-medium text-gray-700 border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none">
                             Filtrar por Tags
@@ -55,7 +55,7 @@
         </div>
         
         <!-- Formulario para enviar los checkboxes seleccionados -->
-        <form id="form-actualizar" method="POST" action=""> 
+        <form id="form-actualizar" method="POST" enctype="multipart/form-data"> 
             <table class="table-auto w-full">
                 <thead>
                     <tr>

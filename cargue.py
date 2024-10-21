@@ -5,9 +5,13 @@ from shutil import move
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from werkzeug.utils import secure_filename
 from sqlalchemy import create_engine
+from flask_wtf import FlaskForm
 
 # Cargue rápido de la tabla a PostgreSQL
 POSTGRES_CONN_STR = 'postgresql://postgres:admin@localhost:5432/rcdatos'
+
+class SimpleForm(FlaskForm):
+    pass  # No es necesario definir campos, pero esto generará el csrf_token automáticamente
 
 def insertTable(name, file_type, separator):
     archivo_errores = '../../../../Lake/errors/errores_' + name
@@ -83,6 +87,7 @@ if not os.path.exists(UPLOAD_FOLDER):
 # Funcion encargada de tomar los datos de la pagina y subir el archivo al Data Lake
 @cargue_bp.route('/cargue', methods=['GET', 'POST'])
 def cargue():
+    form = SimpleForm()  # Instancia el formulario
     if request.method == 'POST':
         new_filename = request.form.get('new_filename')
         quick_create = 'quick_create' in request.form
@@ -126,4 +131,4 @@ def cargue():
             flash(f'Archivo {filename} cargado exitosamente')
             return redirect(url_for('cargue.cargue'))
 
-    return render_template('cargue.html')
+    return render_template('cargue.html', form=form)
