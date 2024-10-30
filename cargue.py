@@ -6,9 +6,11 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from werkzeug.utils import secure_filename
 from sqlalchemy import create_engine
 from flask_wtf import FlaskForm
+from sqlalchemy.exc import SQLAlchemyError
 
-# Cargue rápido de la tabla a PostgreSQL
-POSTGRES_CONN_STR = 'postgresql://postgres:admin@localhost:5432/rcdatos'
+
+# Importar funciones de conexión
+from config.config import conectar_db, get_db_connection_data
 
 class SimpleForm(FlaskForm):
     pass  # No es necesario definir campos, pero esto generará el csrf_token automáticamente
@@ -21,7 +23,7 @@ def insertTable(name, file_type, separator):
     def processBadLines(badLine):
         bad_rows.append(badLine)
         return None
-    
+
     try:
         print(file_type)
         if file_type == 'csv':
@@ -55,21 +57,57 @@ def insertTable(name, file_type, separator):
                 f.write(','.join(row) + '\n')
         flash(f'Se encontraron {len(bad_rows)} filas problemáticas. Guardadas en C/Lake/errors/errores_{name}.', 'error')
 
-    # Inserción a PostgreSQL
-    engine = create_engine(POSTGRES_CONN_STR)
+    # Obtener los datos de conexión y detectar la base de datos
+    connection_data = get_db_connection_data()
+    print(connection_data)
+    db_type = connection_data['db_type']
     
+    # Asignar el nombre de la tabla
     nombre_archivo = os.path.basename('../../../../Lake/data/' + name).replace('.CSV', '')
-    
     if len(nombre_archivo) > 32:
-        nombre_archivo = nombre_archivo[0:55].replace('_', '')
+        nombre_archivo = nombre_archivo[:32]
 
     try:
-        df.to_sql(nombre_archivo, engine, if_exists='replace', schema='staging', index=False)
-        filas_procesadas = len(df)  # Las filas insertadas exitosamente son las del dataframe final
+        if 'Postgres' in db_type:
+            # Conexión a PostgreSQL usando SQLAlchemy
+            engine = create_engine(f"postgresql://{connection_data['user']}:{connection_data['password']}@{connection_data['host']}/{connection_data['database']}")
+            df.to_sql(nombre_archivo, engine, if_exists='replace', schema='staging', index=False)
+            filas_procesadas = len(df)  # Las filas insertadas exitosamente son las del dataframe final
+            engine.dispose()
+        elif 'Oracle' in db_type:
+            # Conexión a Oracle y carga usando inserción manual
+            conn = conectar_db()  # Conexión con oracledb
+            cursor = conn.cursor()
+
+            # Eliminar la tabla si ya existe
+            cursor.execute(f"""
+                BEGIN
+                    EXECUTE IMMEDIATE 'DROP TABLE {nombre_archivo}';
+                EXCEPTION
+                    WHEN OTHERS THEN NULL;
+                END;
+            """)
+
+            # Crear la tabla con todas las columnas del DataFrame como VARCHAR2
+            columns_sql = ', '.join([f"{col} VARCHAR2(300)" for col in df.columns])  # VARCHAR2(4000) para cada columna
+            cursor.execute(f"CREATE TABLE {nombre_archivo} ({columns_sql})")
+
+            # Insertar filas manualmente en Oracle
+            insert_sql = f"INSERT INTO {nombre_archivo} ({', '.join(df.columns)}) VALUES ({', '.join([':' + str(i + 1) for i in range(len(df.columns))])})"
+
+            for _, row in df.iterrows():
+                cursor.execute(insert_sql, tuple(row))
+
+            filas_procesadas = len(df)
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+        
+    except SQLAlchemyError as e:
+        flash(f'Error al insertar datos en la tabla PostgreSQL: {str(e)}', 'error')
     except Exception as e:
-        flash(f'Error al insertar datos en la tabla: {str(e)}', 'error')
-    finally:
-        engine.dispose()
+        flash(f'Error al insertar datos en la tabla Oracle: {str(e)}', 'error')
 
     # Mover el archivo al directorio de procesados
     move('../../../../Lake/data/' + name, '../../../../Lake/procesados/' + name)
@@ -98,7 +136,6 @@ def cargue():
             separator = ','
 
         if 'file' not in request.files:
-            
             flash('No se ha seleccionado ningún archivo')
             return redirect(request.url)
         
@@ -123,7 +160,6 @@ def cargue():
                 # Llamado de la funcion para insertar la tabla
                 file.save(os.path.join(UPLOAD_FOLDER, filename))
                 insertTable(filename, file_type, separator)
-                file.save(os.path.join('../../../../Lake/procesados', filename))
                 flash(f'Tabla {filename} creada exitosamente')
                 return redirect(url_for('cargue.cargue'))
             
