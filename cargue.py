@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import getDescData
 from shutil import move
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from werkzeug.utils import secure_filename
 from sqlalchemy import create_engine
 from flask_wtf import FlaskForm
@@ -25,7 +25,7 @@ def insertTable(name, file_type, separator):
         return None
 
     try:
-        print(file_type)
+        # print(file_type)
         if file_type == 'csv':
             df = pd.read_csv('../../../../Lake/data/' + name, sep=separator, quotechar='"', on_bad_lines=processBadLines, engine='python', header=None)
             extension = '.CSV' 
@@ -36,7 +36,7 @@ def insertTable(name, file_type, separator):
             df = pd.read_json('../../../../Lake/data/' + name)
             extension = '.json'
         elif file_type == 'metadata':
-            print("entre en el if")
+            # print("entre en el if")
             getDescData.getDDIData(name)
             return
     except UnicodeDecodeError:
@@ -44,7 +44,7 @@ def insertTable(name, file_type, separator):
         print(f"Error de codificación con utf-8 en {name}, intentando con latin1.")
         if file_type == 'csv':
             df = pd.read_csv('../../../../Lake/data/' + name, sep=separator, quotechar='"', encoding='latin1', on_bad_lines=processBadLines, engine='python', header=None)
-
+            
     # Asignacion de cabecera de los archivos
     if file_type == 'csv':
         df.columns = df.iloc[0]  # Usar la primera fila como nombres de columnas
@@ -59,7 +59,7 @@ def insertTable(name, file_type, separator):
 
     # Obtener los datos de conexión y detectar la base de datos
     connection_data = get_db_connection_data()
-    print(connection_data)
+    # print(connection_data)
     db_type = connection_data['db_type']
     
     # Asignar el nombre de la tabla
@@ -104,6 +104,20 @@ def insertTable(name, file_type, separator):
             cursor.close()
             conn.close()
         
+        # Informacion del dataframe
+        uniqueData = df.nunique()
+        df = df.astype(str)
+        
+        dataDescription = df.describe(include='all').T.reset_index().rename(columns={0: 'columnas'}).to_dict(orient='records')
+        # print(uniqueData.to_dict())
+        
+        # print(dataDescription)
+        # print(type(dataDescription))
+
+        # Almacenar los datos en session para poder pasarlos al html
+        session['unique_values'] = uniqueData.to_dict()
+        session['description_values'] = dataDescription
+
     except SQLAlchemyError as e:
         flash(f'Error al insertar datos en la tabla PostgreSQL: {str(e)}', 'error')
     except Exception as e:
@@ -126,6 +140,8 @@ if not os.path.exists(UPLOAD_FOLDER):
 @cargue_bp.route('/cargue', methods=['GET', 'POST'])
 def cargue():
     form = SimpleForm()  # Instancia el formulario
+    unique_values = None
+    description_values = None
     if request.method == 'POST':
         new_filename = request.form.get('new_filename')
         quick_create = 'quick_create' in request.form
@@ -161,10 +177,20 @@ def cargue():
                 file.save(os.path.join(UPLOAD_FOLDER, filename))
                 insertTable(filename, file_type, separator)
                 flash(f'Tabla {filename} creada exitosamente')
-                return redirect(url_for('cargue.cargue'))
+                
+                # Tomar los datos de session para enviarlos al render_template
+                uniqueData = session.get('unique_values', {})
+                descriptionData = session.get('description_values', {})
+                
+                # print(uniqueData)
+                print(descriptionData)
+                
+                
+                return render_template('cargue.html', form=form, unique_values=uniqueData or {}, description_values=descriptionData or {})
+            
             
             file.save(os.path.join(UPLOAD_FOLDER, filename))
             flash(f'Archivo {filename} cargado exitosamente')
             return redirect(url_for('cargue.cargue'))
 
-    return render_template('cargue.html', form=form)
+    return render_template('cargue.html', form=form, unique_values=unique_values or {}, description_values=description_values or {})

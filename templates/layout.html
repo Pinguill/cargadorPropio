@@ -9,9 +9,12 @@
 </head>
 <body class="bg-gray-100 font-sans">
     <!-- Navbar -->
-    <nav class="bg-blue-500 p-4 shadow-lg">
+    <nav class="bg-blue-500 p-4 shadow-lg ">
         <div class="container mx-auto flex justify-between items-center">
-            <a href="/" class="text-white text-2xl font-bold">Cargador Propio</a>
+
+            <a href="/" class="flex items-center text-white text-2xl font-bold">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="h-10 w-8 mr-3">
+                Cargador Propio</a>
             <div class="space-x-4">
                 <a href="{{ url_for('cargue.cargue') }}" class="text-white hover:text-gray-200">Cargue</a>
                 <a href="{{ url_for('cargueTR.cargueTR') }}" class="text-white hover:text-gray-200">Cargue Tablas de Referencia</a>

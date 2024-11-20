@@ -83,6 +83,58 @@
                 {% endif %}
             {% endwith %}
         </div>
+        <div class="flex mt-4">
+            <div class="border-2 border-red-200 w-2/3">
+                <h1 class="text-xl font-bold">VALORES UNICOS</h1>
+                <table class="border-separate border-spacing-2 border border-slate-500">
+                    <tr>
+                        <th class="border border-slate-600">Columna</th>
+                        <th class="border border-slate-600">Valores Únicos</th>
+                    </tr>
+                    {% if unique_values %}
+                        {% for column, unique_count in unique_values.items() %}
+                        <tr>
+                            <td class="border border-slate-700">{{ column }}</td>
+                            <td class="border border-slate-700">{{ unique_count }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="2" class="border border-slate-700">No hay datos únicos disponibles.</td>
+                        </tr>
+                    {% endif %}
+                </table>
+            </div>
+            <div class="border-2 border-green-200 w-2/3">
+                <h1 class="text-xl font-bold">DESCRIPCIÓN DE COLUMNAS</h1>
+                <table class="border-separate border-spacing-2 border border-slate-500">
+                    <tr>
+                        <th class="border border-slate-600">Columna</th>
+                        <th class="border border-slate-600">Count</th>
+                        <th class="border border-slate-600">Unique</th>
+                        <th class="border border-slate-600">Top</th>
+                        <th class="border border-slate-600">Freq</th>
+                    </tr>
+                    {% if description_values %}
+                        {% for row in description_values %}
+                            <tr>
+                                <td class="border border-slate-700">{{ row['columnas'] }}</td>
+                                <td class="border border-slate-700">{{ row['count'] }}</td>
+                                <td class="border border-slate-700">{{ row['unique'] }}</td>
+                                <td class="border border-slate-700">{{ row['top'] }}</td>
+                                <td class="border border-slate-700">{{ row['freq'] }}</td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="border border-slate-700">
+                                No hay datos de descripción disponibles.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
 
         <script>
             // Función para seleccionar el tipo de archivo y cambiar el texto del botón
