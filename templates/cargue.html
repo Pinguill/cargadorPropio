@@ -135,8 +135,70 @@
                 </table>
             </div>
         </div>
+        
+        {% if unique_values or description_values %}
+            <button id="exportButton" 
+                    class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                Exportar Datos a TXT
+            </button>
+        {% endif %}
+        
 
         <script>
+            document.getElementById("exportButton")?.addEventListener("click", async () => {
+                try {
+                    // Solicitar una ubicación de guardado al usuario
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: 'exported_data.txt', // Nombre sugerido
+                        types: [
+                            {
+                                description: 'Archivos de Texto',
+                                accept: { 'text/plain': ['.txt'] },
+                            },
+                        ],
+                    });
+
+                    // Obtener los datos de las tablas de "valores únicos" y "descripción de valores"
+                    const uniqueValuesTable = document.querySelector(".border-red-200 table");
+                    const descriptionValuesTable = document.querySelector(".border-green-200 table");
+
+                    // Generar el contenido a partir de las tablas
+                    let content = "=== VALORES ÚNICOS ===\n\n";
+                    content += getTableData(uniqueValuesTable);
+
+                    content += "\n\n=== DESCRIPCIÓN DE COLUMNAS ===\n\n";
+                    content += getTableData(descriptionValuesTable);
+
+                    // Escribir los datos en el archivo seleccionado por el usuario
+                    const writableStream = await handle.createWritable();
+                    await writableStream.write(content);
+                    await writableStream.close();
+
+                    alert("¡Datos exportados con éxito!");
+                } catch (err) {
+                    console.error("Error al guardar el archivo:", err);
+                    alert("No se pudo exportar el archivo.");
+                }
+            });
+
+            // Función para obtener los datos de una tabla en formato texto
+            function getTableData(table) {
+                if (!table) return "No hay datos disponibles.\n";
+
+                let rows = table.querySelectorAll("tr");
+                let data = [];
+
+                rows.forEach((row) => {
+                    let cells = row.querySelectorAll("th, td");
+                    let rowData = [];
+                    cells.forEach((cell) => rowData.push(cell.textContent.trim()));
+                    data.push(rowData.join("\t")); // Separar por tabulación
+                });
+
+                return data.join("\n");
+            }
+            
+
             // Función para seleccionar el tipo de archivo y cambiar el texto del botón
             function selectFileType(type, label) {
                 document.getElementById('file_type').value = type;
