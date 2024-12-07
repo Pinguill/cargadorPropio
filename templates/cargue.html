@@ -29,7 +29,7 @@
                             <a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white" onclick="selectFileType('excel', 'Excel')">Excel</a>
                         </li>
                         <li>
-                            <a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white" onclick="selectFileType('csv', 'CSV')">CSV</a>
+                            <a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white" onclick="selectFileType('csv', 'CSV')">CSV o TXT</a>
                         </li>
                         <li>
                             <a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white" onclick="selectFileType('json', 'JSON')">JSON</a>
@@ -46,7 +46,7 @@
             <!-- Input del separador, que solo se muestra para Excel o CSV -->
             <div class="mb-4 hidden" id="separator_input">
                 <label for="separator">Separador (solo para CSV/Excel):</label>
-                <input type="text" name="separator" id="separator" class="form-control w-64 text-center border-2 border-rose-600" placeholder="Ej: ,">
+                <input type="text" name="separator" id="separator" class="form-control w-64 text-center border-2 border-rose-600" placeholder="Ej: , ; \t">
             </div>
 
             <div class="text-center mb-4">
