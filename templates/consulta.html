@@ -59,9 +59,10 @@
             <table class="table-auto w-full">
                 <thead>
                     <tr>
+                        <th class="px-4 py-2">     </th>
                         <th class="px-4 py-2">Nombre del Conjunto de Datos</th>
                         <th class="px-4 py-2">Nombre Columna</th>
-                        <th class="px-4 py-2">Es Lista</th>
+                        <th class="px-4 py-2">Es Categorico</th>
                         <th class="px-4 py-2">Descripción</th>
                         <th class="px-4 py-2">Tipo Columna</th>
                         <th class="px-4 py-2">Tag</th>
@@ -70,11 +71,14 @@
                 <tbody>
                     {% for row in data %}
                     <tr>
+                        <td class="border px-4 py-2 text-left"> 
+                            <input type="checkbox" value="{{ row[0] }}" {% if row[7] %} checked {% endif %} 
+                                onchange="actualizarEstado(this, '{{ row[0] }}')" > 
+                        </td>
                         <td class="border px-4 py-2 text-left">{{ row[1] }}</td>
                         <td class="border px-4 py-2 text-left">{{ row[2] }}</td>
                         <td class="border px-4 py-2 text-center">
-                            <input type="checkbox" name="es_lista" value="{{ row[0] }}" {% if row[6] %} checked {% endif %} 
-                                onchange="actualizarEstado(this, '{{ row[0] }}')">
+                            <input type="checkbox" name="es_lista" value="{{ row[0] }}" {% if row[6] %} checked {% endif %}>
                         </td>
                         <td class="border px-4 py-2 text-left">{{ row[3] }}</td>
                         <td class="border px-4 py-2">{{ row[4] }}</td>
@@ -89,6 +93,9 @@
         
         <!-- Mensaje de éxito o error -->
         <div id="mensaje-resultado" class="mt-4 text-gray-700"></div>
+        <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-2 rounded" id="exportarSeleccionados">
+            Exportar Seleccionados
+        </button>
 
         <!-- Controles de paginación -->
         <div class="flex justify-between items-center mt-4">
@@ -109,28 +116,29 @@
     </div>
 
     <script>
+        
         function toggleDropdown() {
             var dropdown = document.getElementById('dropdownTags');
             dropdown.classList.toggle('hidden');
         }
 
         function actualizarEstado(checkbox, columna) {
-            var esLista = checkbox.checked ? 1 : 0; // 1 si está marcado, 0 si no
+            var esCheckbox = checkbox.checked ? 1 : 0; // 1 si está marcado, 0 si no
             fetch("{{ url_for('consulta.actualizar_estado') }}", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-CSRFToken": "{{ csrf_token() }}" // Si estás utilizando CSRF Protection
+                    "X-CSRFToken": "{{ csrf_token() }}" 
                 },
                 body: JSON.stringify({
                     columna: columna,
-                    es_lista: esLista
+                    esCheckbox: esCheckbox
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    document.getElementById("mensaje-resultado").innerText = "Actualización exitosa en id_columna: " + columna ;
+                    document.getElementById("mensaje-resultado").innerText = "Se selecciono la id_columna: " + columna ;
                 } else {
                     document.getElementById("mensaje-resultado").innerText = "Error al actualizar en id_columna: " + columna;
                 }
@@ -140,5 +148,42 @@
                 document.getElementById("mensaje-resultado").innerText = "Error en la petición.";
             });
         }
+
+        document.getElementById('exportarSeleccionados').addEventListener('click', async () => {
+            try {
+                // Llamada al backend para exportar los datos
+                const response = await fetch('/exportar_datos', {
+                    method: 'POST',
+                    headers : {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": "{{ csrf_token() }}"
+                    },
+                });
+
+                // Verificar si la respuesta es correcta
+                if (!response.ok) {
+                    const errorText = await response.text(); // Obtener el mensaje de error del servidor
+                    alert(`Error al exportar los datos: ${errorText}`);
+                    return;
+                }
+
+                // Descargar el archivo Excel si la respuesta es exitosa
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'datos_exportados.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+
+                alert('¡El archivo Excel se descargó correctamente!');
+            } catch (error) {
+                // Manejar errores en la conexión o en la llamada
+                console.error('Error en la solicitud:', error);
+                alert('Ocurrió un error al intentar exportar los datos.');
+            }
+        });
     </script>
 {% endblock %}

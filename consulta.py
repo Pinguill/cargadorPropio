@@ -1,6 +1,8 @@
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, Response
+from io import BytesIO
 import psycopg2
 import oracledb
+import pandas as pd
 import os
 
 consulta_bp = Blueprint('consulta', __name__)
@@ -47,26 +49,24 @@ def obtener_datos(page, per_page, selected_tags=None, conjunto=None, descripcion
     
     # Consulta básica sin filtros, agregando dc.id_columna
     query = """
-        SELECT dc.id_columna, dc.nombre_tabla, dc.nombre_columna, dc.descripcion, dc.tipo_columna, ARRAY_AGG(t.nombre_tag), dc.es_tabla
+        SELECT dc.id_columna, dc.nombre_tabla, dc.nombre_columna, dc.descripcion, dc.tipo_columna, ARRAY_AGG(t.nombre_tag), dc.es_tabla, dc.check_temp
         FROM metadata.descripcion_columnas dc
         LEFT JOIN metadata.tag_columna tc ON dc.id_columna = tc.id_column
         LEFT JOIN metadata.tags t ON tc.id_tag = t.id_tag
         WHERE 1=1
     """
-
+    
     params = []
     
-    # Filtro por conjunto de datos
+    # Filtros opcionales
     if conjunto:
         query += " AND dc.nombre_tabla ILIKE %s"
         params.append(f'%{conjunto}%')
     
-    # Filtro por descripción
     if descripcion:
         query += " AND dc.descripcion ILIKE %s"
         params.append(f'%{descripcion}%')
     
-    # Filtro por tags seleccionados
     if selected_tags:
         query += """
             AND dc.id_columna IN (
@@ -77,16 +77,17 @@ def obtener_datos(page, per_page, selected_tags=None, conjunto=None, descripcion
         """
         params.append(selected_tags)
     
-    # Añade la cláusula GROUP BY y paginación, agregando dc.id_columna en el GROUP BY
-    query += " GROUP BY dc.id_columna, dc.nombre_tabla, dc.nombre_columna, dc.descripcion, dc.tipo_columna, dc.es_tabla LIMIT %s OFFSET %s"
+    # Añade la cláusula GROUP BY
+    query += " GROUP BY dc.id_columna, dc.nombre_tabla, dc.nombre_columna, dc.descripcion, dc.tipo_columna, dc.es_tabla, dc.check_temp LIMIT %s OFFSET %s"
     params.extend([per_page, offset])
     
+    # Ejecuta la consulta
     conn = conectar_db()
     cursor = conn.cursor()
     cursor.execute(query, params)
     data = cursor.fetchall()
     
-    # Consulta para contar el total de registros (con o sin filtro)
+    # Consulta para contar el total de registros
     total_records_query = """
         SELECT COUNT(DISTINCT dc.id_columna)
         FROM metadata.descripcion_columnas dc
@@ -95,7 +96,6 @@ def obtener_datos(page, per_page, selected_tags=None, conjunto=None, descripcion
     """
     
     total_params = []
-    
     if conjunto:
         total_records_query += " AND dc.nombre_tabla ILIKE %s"
         total_params.append(f'%{conjunto}%')
@@ -154,25 +154,25 @@ def actualizar_estado():
     
     # Extrae los valores de columna y el estado del checkbox
     columna = data.get('columna')
-    es_lista = data.get('es_lista')
+    es_checkbox = data.get('esCheckbox')
     
     # Conecta a la base de datos
     conn = conectar_db()
     cursor = conn.cursor()
     
     try:
-        # Actualiza el campo "es_tabla" en la tabla según el nombre de la columna
-        print(type(es_lista))
-        if es_lista == 0:
+        # Actualiza el campo "esCheckbox" en la tabla según el nombre de la columna
+        print(type(es_checkbox))
+        if es_checkbox == 0:
             query = """
                 UPDATE metadata.descripcion_columnas
-                SET es_tabla = false
+                SET check_temp = false
                 WHERE id_columna = %s
             """
-        elif es_lista == 1:
+        elif es_checkbox == 1:
             query = """
                 UPDATE metadata.descripcion_columnas
-                SET es_tabla = true
+                SET check_temp = true
                 WHERE id_columna = %s
             """
         cursor.execute(query, (columna,))
@@ -189,3 +189,57 @@ def actualizar_estado():
         conn.close()
         # En caso de error, responde con un JSON de error
         return jsonify(success=False, error=str(e)), 500
+
+@consulta_bp.route('/exportar_datos', methods=['POST'])
+def exportar_datos():
+    try:
+        # Obtener la conexión dinámica a la base de datos
+        conn = conectar_db()
+
+        # Obtener las filas seleccionadas de la tabla `descripcion_columnas`
+        query_selected_rows = """
+            SELECT id_columna 
+            FROM metadata.descripcion_columnas 
+            WHERE check_temp = TRUE
+        """
+        selected_ids = pd.read_sql(query_selected_rows, conn)
+
+        if selected_ids.empty:
+            return Response("No hay filas seleccionadas para exportar.", status=400)
+
+        # Obtener los datos de la tabla `categorias` para las columnas seleccionadas
+        query_categorias = f"""
+            SELECT id_columna, codigo_categoria, descripcion_categoria 
+            FROM categorias 
+            WHERE id_columna IN ({', '.join(map(str, selected_ids['id_columna'].tolist()))})
+        """
+        categorias_data = pd.read_sql(query_categorias, conn)
+
+        if categorias_data.empty:
+            return Response("No hay datos en la tabla 'categorias' para los valores seleccionados.", status=400)
+
+        # Crear el archivo Excel con una hoja por cada `id_columna`
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            for id_columna in categorias_data['id_columna'].unique():
+                data = categorias_data[categorias_data['id_columna'] == id_columna]
+                data[['codigo_categoria', 'descripcion_categoria']].to_excel(
+                    writer, sheet_name=f'Columna_{id_columna}', index=False
+                )
+
+        # Guardar el archivo en memoria
+        output.seek(0)
+
+        # Mensaje de respueta
+        return Response(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            headers={"Content-Disposition": "attachment;filename=datos_exportados.xlsx"}
+        )
+    except Exception as e:
+        # Si ocurre un error, responder con un estado 500
+        return Response(f"Error al exportar los datos: {str(e)}", status=500)
+    finally:
+        # Cerrar la conexión
+        if 'conn' in locals() and conn:
+            conn.close()

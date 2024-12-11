@@ -4,6 +4,7 @@ from flask import Blueprint, render_template, request, redirect, flash
 from werkzeug.utils import secure_filename
 from flask_wtf import FlaskForm
 from sqlalchemy import create_engine, text
+from shutil import move
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 from config.config import conectar_db, get_db_connection_data  # Importar funciones de conexión
@@ -119,6 +120,7 @@ def cargueTR():
 
         insertTablasReferencia(file_path)
 
+        move(UPLOAD_FOLDER + filename, '../../../../Lake/procesados/' + filename)
         flash('Archivo subido y procesado correctamente.', 'success')
         return redirect(request.url)
 
