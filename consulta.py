@@ -1,11 +1,15 @@
-from flask import Blueprint, render_template, request, jsonify, Response
+from flask import Blueprint, flash, redirect, render_template, request, jsonify, Response, url_for
 from io import BytesIO
+from flask_wtf import FlaskForm
 import psycopg2
 import oracledb
 import pandas as pd
 import os
 
 consulta_bp = Blueprint('consulta', __name__)
+
+class SimpleForm(FlaskForm):
+    pass  # No es necesario definir campos, pero esto generará el csrf_token automáticamente
 
 def get_db_connection_data():
     connection_data = {}
@@ -43,6 +47,17 @@ def obtener_tags():
     cursor.close()
     conn.close()
     return tags
+
+def obtener_conjuntos():
+    query = "SELECT DISTINCT nombre_tabla FROM metadata.descripcion_columnas"
+    conn = conectar_db()
+    cursor = conn.cursor()
+    cursor.execute(query)
+    conjuntos = [row[0] for row in cursor.fetchall()]
+    cursor.close()
+    conn.close()
+    return conjuntos
+
 
 def obtener_datos(page, per_page, selected_tags=None, conjunto=None, descripcion=None):
     offset = (page - 1) * per_page  # Calcula el desplazamiento
@@ -125,9 +140,10 @@ def obtener_datos(page, per_page, selected_tags=None, conjunto=None, descripcion
 @consulta_bp.route('/consulta', methods=['GET', 'POST'])
 def consulta():
     # Parámetro de la página (por defecto es 1)
+    form = SimpleForm()
     page = request.args.get('page', 1, type=int)
     per_page = 10  # Número de registros por página
-    
+
     # Obtener los filtros de descripción y conjunto de datos
     conjunto = request.args.get('filtrar_conjunto', type=str)
     descripcion = request.args.get('filtrar_desc', type=str)
@@ -137,15 +153,19 @@ def consulta():
 
     # Obtener los datos de la base de datos con los filtros aplicados
     data, total_records = obtener_datos(page, per_page, selected_tags, conjunto, descripcion)
-    
+
     # Obtener todos los tags para mostrar en el formulario
     tags = obtener_tags()
 
+    # Obtener todos los conjuntos de datos para mostrar en el dropdown
+    conjuntos = obtener_conjuntos()
+
     # Calcular el número total de páginas
     total_pages = (total_records + per_page - 1) // per_page
-    
-    # Renderizar la plantilla y pasar los datos, los tags, la página actual y el total de páginas
-    return render_template('consulta.html', data=data, tags=tags, page=page, total_pages=total_pages)
+
+    # Renderizar la plantilla y pasar los datos, los tags, los conjuntos, la página actual y el total de páginas
+    return render_template('consulta.html', data=data, tags=tags, conjuntos=conjuntos, page=page, total_pages=total_pages, form=form)
+
 
 @consulta_bp.route('/actualizar_estado', methods=['GET', 'POST'])
 def actualizar_estado():
@@ -198,8 +218,8 @@ def exportar_datos():
 
         # Obtener las filas seleccionadas de la tabla `descripcion_columnas`
         query_selected_rows = """
-            SELECT id_columna 
-            FROM metadata.descripcion_columnas 
+            SELECT id_columna, nombre_columna AS nombre_variable
+            FROM metadata.descripcion_columnas
             WHERE check_temp = TRUE
         """
         selected_ids = pd.read_sql(query_selected_rows, conn)
@@ -209,28 +229,39 @@ def exportar_datos():
 
         # Obtener los datos de la tabla `categorias` para las columnas seleccionadas
         query_categorias = f"""
-            SELECT id_columna, codigo_categoria, descripcion_categoria 
-            FROM categorias 
-            WHERE id_columna IN ({', '.join(map(str, selected_ids['id_columna'].tolist()))})
+            SELECT c.id_columna, c.codigo_categoria, c.descripcion_categoria, d.nombre_columna AS nombre_variable
+            FROM metadata.categorias c
+            JOIN metadata.descripcion_columnas d ON c.id_columna = d.id_columna
+            WHERE c.id_columna IN ({', '.join(map(str, selected_ids['id_columna'].tolist()))})
         """
         categorias_data = pd.read_sql(query_categorias, conn)
 
         if categorias_data.empty:
             return Response("No hay datos en la tabla 'categorias' para los valores seleccionados.", status=400)
 
-        # Crear el archivo Excel con una hoja por cada `id_columna`
+        # Crear el archivo Excel con una hoja por cada `id_columna`, usando `nombre_variable` como nombre de la pestaña
         output = BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            for id_columna in categorias_data['id_columna'].unique():
+            for id_columna, nombre_variable in selected_ids.itertuples(index=False):
                 data = categorias_data[categorias_data['id_columna'] == id_columna]
                 data[['codigo_categoria', 'descripcion_categoria']].to_excel(
-                    writer, sheet_name=f'Columna_{id_columna}', index=False
+                    writer, sheet_name=nombre_variable[:31], index=False  # Limitar el nombre a 31 caracteres
                 )
+
+        # Actualizar los valores de `check_temp` a FALSE después de exportar
+        update_check_temp = """
+            UPDATE metadata.descripcion_columnas
+            SET check_temp = FALSE
+            WHERE check_temp = TRUE
+        """
+        with conn.cursor() as cursor:
+            cursor.execute(update_check_temp)
+            conn.commit()
 
         # Guardar el archivo en memoria
         output.seek(0)
 
-        # Mensaje de respueta
+        # Enviar el archivo como respuesta
         return Response(
             output,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -243,3 +274,80 @@ def exportar_datos():
         # Cerrar la conexión
         if 'conn' in locals() and conn:
             conn.close()
+
+@consulta_bp.route('/consulta/crearTag', methods=['GET'])
+def crearTag():
+    # Obtener datos de la fila seleccionada
+    form = SimpleForm()
+    id_columna = request.args.get('id_columna')
+    nombre_tabla =  request.args.get('nombre_tabla')
+    nombre_columna = request.args.get('nombre_columna')
+    descripcion = request.args.get('descripcion')
+    if not id_columna:
+        flash('No se ha seleccionado una columna.', 'error')
+        return redirect(url_for('consulta.consulta'))
+    tags = obtener_tags()
+
+    return render_template('crearTag.html', id_columna=id_columna, form=form, tags=tags, nombre_tabla=nombre_tabla, nombre_columna=nombre_columna, descripcion=descripcion)
+
+
+@consulta_bp.route('/consulta/guardarTag', methods=['POST'])
+def guardarTag():
+    nombre_tag = request.form.get('nombre_tag')
+    descripcion = request.form.get('descripcion')
+    id_columna = request.form.get('id_columna')
+    
+    # Lógica para guardar el tag en la base de datos
+    query = "INSERT INTO metadata.tags (nombre_tag, descripcion) VALUES (%s, %s) RETURNING id_tag"
+    conn = conectar_db()
+    cursor = conn.cursor()
+    cursor.execute(query, (nombre_tag, descripcion))
+    id_tag = cursor.fetchone()[0]
+    
+    # Asociar el tag con la columna seleccionada
+    query_assoc = "INSERT INTO metadata.tag_columna (id_tag, id_column) VALUES (%s, %s)"
+    cursor.execute(query_assoc, (id_tag, id_columna))
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    # Redirigir al usuario a la página original
+    flash('Tag creado y asociado a exitosamente', 'success')
+    return redirect(url_for('consulta.consulta'))
+
+
+@consulta_bp.route('/consulta/agregarTagExistente', methods=['POST'])
+def agregarTagExistente():
+    id_tag = request.form.get('tag_existente')
+    id_columna = request.form.get('id_columna')
+
+    if not id_tag or not id_columna:
+        flash('Tag o columna no seleccionados.', 'error')
+        return redirect(url_for('consulta.creacionTag', id_columna=id_columna))
+
+    conn = conectar_db()
+    cursor = conn.cursor()
+    try:
+        # Verificar si ya existe la asociación
+        query_verificar = "SELECT 1 FROM metadata.tag_columna WHERE id_tag = %s AND id_column = %s"
+        cursor.execute(query_verificar, (id_tag, id_columna))
+        if cursor.fetchone():
+            flash('El tag ya está asociado con esta columna.', 'error')
+            return redirect(url_for('consulta.consulta'))
+
+        # Insertar la asociación
+        query_assoc = "INSERT INTO metadata.tag_columna (id_tag, id_column) VALUES (%s, %s)"
+        cursor.execute(query_assoc, (id_tag, id_columna))
+        conn.commit()
+
+        flash('Tag asociado exitosamente.', 'success')
+        return redirect(url_for('consulta.consulta'))
+
+    except Exception as e:
+        conn.rollback()
+        flash(f'Ocurrió un error: {str(e)}', 'error')
+        return redirect(url_for('consulta.creacionTag', id_columna=id_columna))
+    finally:
+        cursor.close()
+        conn.close()

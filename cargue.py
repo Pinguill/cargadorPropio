@@ -115,6 +115,8 @@ def insertTable(name, file_type, separator):
         # print(type(dataDescription))
 
         # Almacenar los datos en session para poder pasarlos al html
+        session['num_columnas'] = df.shape[1]
+
         session['unique_values'] = uniqueData.to_dict()
         session['description_values'] = dataDescription
 
@@ -142,6 +144,7 @@ def cargue():
     form = SimpleForm()  # Instancia el formulario
     unique_values = None
     description_values = None
+    numColumnas = None
     if request.method == 'POST':
         new_filename = request.form.get('new_filename')
         quick_create = 'quick_create' in request.form
@@ -181,16 +184,17 @@ def cargue():
                 # Tomar los datos de session para enviarlos al render_template
                 uniqueData = session.get('unique_values', {})
                 descriptionData = session.get('description_values', {})
+                numColumnas = session.get('num_columnas', {})
                 
                 # print(uniqueData)
                 print(descriptionData)
                 
                 
-                return render_template('cargue.html', form=form, unique_values=uniqueData or {}, description_values=descriptionData or {})
+                return render_template('cargue.html', form=form, unique_values=uniqueData or {}, description_values=descriptionData or {}, numColumnas=numColumnas or {})
             
             
             file.save(os.path.join(UPLOAD_FOLDER, filename))
             flash(f'Archivo {filename} cargado exitosamente')
             return redirect(url_for('cargue.cargue'))
 
-    return render_template('cargue.html', form=form, unique_values=unique_values or {}, description_values=description_values or {})
+    return render_template('cargue.html', form=form, unique_values=unique_values or {}, description_values=description_values or {}, numColumnas=numColumnas or {})

@@ -6,17 +6,25 @@
     <div class="bg-white p-6 rounded-lg shadow-lg text-center">
         <h1 class="text-3xl font-bold mb-4 text-blue-600">Página de Consulta</h1>
 
-        <!-- Dropdown para filtros por tags -->
         <div class="grid grid-cols-3 h-16">
             <div class="items-stretch">
+                 <!-- Dropdown para filtrar conjuntos de datos-->
                 <form method="GET" action="{{ url_for('consulta.consulta') }}" enctype="multipart/form-data">
-                    <input type="text" name="filtrar_conjunto" id="filtrar_conjunto" class="border rounded py-2 px-4 text-gray-700" placeholder="Filtrar Conjunto de Datos" />
+                    <div class="relative inline-block text-left mb-4">
+                        <select name="filtrar_conjunto" id="filtrar_conjunto" class="border rounded py-2 px-4 text-gray-700 w-64">
+                            <option value="">Seleccione un Conjunto</option>
+                            {% for conjunto in conjuntos %}
+                            <option value="{{ conjunto }}">{{ conjunto }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-2 rounded">
                         Filtrar Conjunto de Datos
                     </button>
                 </form>
             </div>
             <div class="items-stretch">
+                 <!-- Input para filtrar descripcion -->
                 <form method="GET" action="{{ url_for('consulta.consulta') }}" enctype="multipart/form-data">
                     <input type="text" name="filtrar_desc" id="filtrar_desc" class="border rounded py-2 px-3 text-gray-700" placeholder="Filtrar Descripción" />
                     <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-2 rounded">
@@ -84,13 +92,39 @@
                         <td class="border px-4 py-2">{{ row[4] }}</td>
                         <td class="border px-4 py-2">
                             {{ row[5] if row[5] else "Sin Tag" }}
+                            
+                        </td>
+                        <td class="border px-4 py-2 text-center">
+                            <form method="POST" action="{{ url_for('consulta.crearTag') }}">
+                                {{ form.csrf_token() }}
+                                <a href="{{ url_for('consulta.crearTag', id_columna=row[0], nombre_tabla=row[1], nombre_columna=row[2], descripcion=row[3]) }}" 
+                                    class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                                    Crear Tag
+                                </a>
+                            </form>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </form>
-        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mt-4">
+                    {% for category, message in messages %}
+                        {% if category == 'error' %}
+                            <div class="bg-red-100 text-red-700 p-4 rounded-lg">
+                                {{ message }}
+                            </div>
+                        {% else %}
+                            <div class="bg-green-100 text-green-700 p-4 rounded-lg">
+                                {{ message }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
         <!-- Mensaje de éxito o error -->
         <div id="mensaje-resultado" class="mt-4 text-gray-700"></div>
         <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-2 rounded" id="exportarSeleccionados">

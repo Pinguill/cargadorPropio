@@ -1,0 +1,94 @@
+{% extends "layout.html" %}
+
+{% block title %}Agregar Tag{% endblock %}
+
+{% block content %}
+    <form method="POST" action="{{ url_for('consulta.guardarTag') }}">
+        {{ form.csrf_token() }}
+        <!-- Datos de la columna  -->
+        <div class="max-w-lg max-h-md mx-auto bg-white p-4 rounded-lg shadow-md">
+            <h1 class="font-bold"> DATOS DE COLUMNA </h1>
+            <div class="flex justify-between items-center pb-2">
+                <span class="text-gray-600 font-medium">Identificador de la columna </span>
+                <span class="text-gray-800 font-semibold"> {{ id_columna }} </span>
+                <input type="hidden" name="id_columna" value="{{ id_columna }}">
+            </div>
+            <hr class="border-t border-gray-300">
+            
+            
+            <div class="flex justify-between items-center py-2">
+                <span class="text-gray-600 font-medium">Nombre del conjunto de datos </span>
+                <span class="text-gray-800 font-semibold"> {{ nombre_tabla }} </span>
+                <input type="hidden" name="nombre_tabla" value="{{ nombre_tabla }}">
+            </div>
+            <hr class="border-t border-gray-300">
+            
+            <div class="flex justify-between items-center py-2">
+                <span class="text-gray-600 font-medium">Nombre de la columna </span>
+                <span class="text-gray-800 font-semibold"> {{ nombre_columna }} </span>
+                <input type="hidden" name="nombre_columna" value="{{ nombre_columna }}">
+            </div>
+                <hr class="border-t border-gray-300">
+        </div>
+
+        <!-- Crear nuevo tag -->
+        <div class="max-w-md max-h-md mx-auto bg-white p-4 rounded-lg shadow-md mt-4">
+            <h1 class="font-bold"> CREAR TAG </h1>
+            <div class="flex justify-between items-center pb-2">
+                <span class="text-gray-600 font-medium">Nombre del Tag </span>
+                <input type="text" name="nombre_tag" id="nombre_tag" class="border rounded py-2 px-3 text-gray-800" required>
+            </div>
+            <hr class="border-t border-gray-300">
+            
+            <div class="flex justify-between items-center py-2">
+                <span class="text-gray-600 font-medium">Descripción </span>
+                <textarea name="descripcion" id="descripcion" class="border rounded py-2 px-3 text-gray-800" required></textarea>
+            </div>
+
+            <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4">
+                Guardar Tag
+            </button>
+        </div>
+
+        <!-- Dropdown para seleccionar un tag existente -->
+    </form>
+    <div class="max-w-md max-h-md mx-auto bg-white p-4 rounded-lg shadow-md mt-4">
+        <h1 class="font-bold"> AGREGAR TAG EXISTENTE </h1>
+        <form action="{{ url_for('consulta.agregarTagExistente') }}" method="POST">
+            {{ form.csrf_token() }}
+            <div class="flex justify-between items-center pb-2">
+                <label for="tag_existente" class="text-gray-600 font-medium">Seleccionar Tag Existente</label>
+                <select name="tag_existente" id="tag_existente" class="border rounded py-2 px-3 text-gray-800" required>
+                    <option value="" disabled selected>Selecciona un tag</option>
+                    {% for tag in tags %}
+                    <option value="{{ tag[2] }}">{{ tag[0] }}</option> <!-- id_tag como value y nombre_tag como texto -->
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Pasar id_columna como campo oculto -->
+            <input type="hidden" name="id_columna" value="{{ id_columna }}">
+
+            <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4">
+                Agregar Tag
+            </button>
+        </form>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mt-4">
+                    {% for category, message in messages %}
+                        {% if category == 'error' %}
+                            <div class="bg-red-100 text-red-700 p-4 rounded-lg">
+                                {{ message }}
+                            </div>
+                        {% else %}
+                            <div class="bg-green-100 text-green-700 p-4 rounded-lg">
+                                {{ message }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+{% endblock %}
