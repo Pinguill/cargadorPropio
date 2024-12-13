@@ -61,6 +61,14 @@
                 </form>
             </div>
         </div>
+        <div>
+            <form method="GET" action="{{ url_for('consulta.consulta') }}" enctype="multipart/form-data">
+                <input type="text" name="filtrar_categoria" id="filtrar_categoria" class="border rounded py-2 px-3 text-gray-700" placeholder="Filtrar Categoría" />
+                <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-2 rounded">
+                    Filtrar Categoría
+                </button>
+            </form>            
+        </div>
         
         <!-- Formulario para enviar los checkboxes seleccionados -->
         <form id="form-actualizar" method="POST" enctype="multipart/form-data"> 
@@ -94,11 +102,11 @@
                             {{ row[5] if row[5] else "Sin Tag" }}
                             
                         </td>
-                        <td class="border px-4 py-2 text-center">
+                        <td class="border px-4 py-2">
                             <form method="POST" action="{{ url_for('consulta.crearTag') }}">
                                 {{ form.csrf_token() }}
                                 <a href="{{ url_for('consulta.crearTag', id_columna=row[0], nombre_tabla=row[1], nombre_columna=row[2], descripcion=row[3]) }}" 
-                                    class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                                    class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded inline-block text-center">
                                     Crear Tag
                                 </a>
                             </form>

@@ -59,20 +59,20 @@ def obtener_conjuntos():
     return conjuntos
 
 
-def obtener_datos(page, per_page, selected_tags=None, conjunto=None, descripcion=None):
+def obtener_datos(page, per_page, selected_tags=None, conjunto=None, descripcion=None, categoria=None):
     offset = (page - 1) * per_page  # Calcula el desplazamiento
-    
-    # Consulta básica sin filtros, agregando dc.id_columna
+
     query = """
         SELECT dc.id_columna, dc.nombre_tabla, dc.nombre_columna, dc.descripcion, dc.tipo_columna, ARRAY_AGG(t.nombre_tag), dc.es_tabla, dc.check_temp
         FROM metadata.descripcion_columnas dc
         LEFT JOIN metadata.tag_columna tc ON dc.id_columna = tc.id_column
         LEFT JOIN metadata.tags t ON tc.id_tag = t.id_tag
+        LEFT JOIN metadata.categorias c ON dc.id_columna = c.id_columna 
         WHERE 1=1
     """
     
     params = []
-    
+
     # Filtros opcionales
     if conjunto:
         query += " AND dc.nombre_tabla ILIKE %s"
@@ -81,7 +81,11 @@ def obtener_datos(page, per_page, selected_tags=None, conjunto=None, descripcion
     if descripcion:
         query += " AND dc.descripcion ILIKE %s"
         params.append(f'%{descripcion}%')
-    
+
+    if categoria: 
+        query += " AND c.descripcion_categoria ILIKE %s"
+        params.append(f'%{categoria}%')
+
     if selected_tags:
         query += """
             AND dc.id_columna IN (
@@ -101,15 +105,16 @@ def obtener_datos(page, per_page, selected_tags=None, conjunto=None, descripcion
     cursor = conn.cursor()
     cursor.execute(query, params)
     data = cursor.fetchall()
-    
+
     # Consulta para contar el total de registros
     total_records_query = """
         SELECT COUNT(DISTINCT dc.id_columna)
         FROM metadata.descripcion_columnas dc
         LEFT JOIN metadata.tag_columna tc ON dc.id_columna = tc.id_column
+        LEFT JOIN metadata.categorias c ON dc.id_columna = c.id_columna  -- Nuevo JOIN
         WHERE 1=1
     """
-    
+
     total_params = []
     if conjunto:
         total_records_query += " AND dc.nombre_tabla ILIKE %s"
@@ -118,7 +123,11 @@ def obtener_datos(page, per_page, selected_tags=None, conjunto=None, descripcion
     if descripcion:
         total_records_query += " AND dc.descripcion ILIKE %s"
         total_params.append(f'%{descripcion}%')
-    
+
+    if categoria:  
+        total_records_query += " AND c.descripcion_categoria ILIKE %s"
+        total_params.append(f'%{categoria}%')
+
     if selected_tags:
         total_records_query += """
             AND dc.id_columna IN (
@@ -128,13 +137,13 @@ def obtener_datos(page, per_page, selected_tags=None, conjunto=None, descripcion
             )
         """
         total_params.append(selected_tags)
-    
+
     cursor.execute(total_records_query, total_params)
     total_records = cursor.fetchone()[0]
-    
+
     cursor.close()
     conn.close()
-    
+
     return data, total_records
 
 @consulta_bp.route('/consulta', methods=['GET', 'POST'])
@@ -144,15 +153,16 @@ def consulta():
     page = request.args.get('page', 1, type=int)
     per_page = 10  # Número de registros por página
 
-    # Obtener los filtros de descripción y conjunto de datos
+    # Obtener los filtros de descripción, conjunto de datos y categoría
     conjunto = request.args.get('filtrar_conjunto', type=str)
     descripcion = request.args.get('filtrar_desc', type=str)
+    categoria = request.args.get('filtrar_categoria', type=str) 
 
     # Obtener los tags seleccionados (si los hay)
     selected_tags = request.args.getlist('tags', type=int)
 
     # Obtener los datos de la base de datos con los filtros aplicados
-    data, total_records = obtener_datos(page, per_page, selected_tags, conjunto, descripcion)
+    data, total_records = obtener_datos(page, per_page, selected_tags, conjunto, descripcion, categoria)
 
     # Obtener todos los tags para mostrar en el formulario
     tags = obtener_tags()
@@ -165,6 +175,8 @@ def consulta():
 
     # Renderizar la plantilla y pasar los datos, los tags, los conjuntos, la página actual y el total de páginas
     return render_template('consulta.html', data=data, tags=tags, conjuntos=conjuntos, page=page, total_pages=total_pages, form=form)
+
+
 
 
 @consulta_bp.route('/actualizar_estado', methods=['GET', 'POST'])
